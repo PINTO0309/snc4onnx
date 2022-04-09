@@ -1,5 +1,7 @@
 #! /usr/bin/env python
 
+import sys
+import os
 from argparse import ArgumentParser
 import onnx
 from typing import List
@@ -35,7 +37,40 @@ def combine():
 
 def main():
     parser = ArgumentParser()
+    parser.add_argument(
+        '--input_onnx_file_paths',
+        type=str,
+        required=True,
+        nargs='*',
+        help='Input onnx file paths.'
+    )
+    parser.add_argument(
+        '--non_verbose',
+        action='store_true',
+        help='Do not show all information logs. Only error logs are displayed.'
+    )
     args = parser.parse_args()
+
+    """
+    Pattern
+        [1] out x1 : in x1
+        [2] out x1 : in xN
+    """
+
+    for idx, input_onnx_file_path in enumerate(args.input_onnx_file_paths):
+        # file existence check
+        if not os.path.exists(input_onnx_file_path) or \
+            not os.path.isfile(input_onnx_file_path) or \
+            not os.path.splitext(input_onnx_file_path)[-1] == '.onnx':
+            print(
+                f'{Color.RED}ERROR:{Color.RESET} '+
+                f'The specified file (.onnx) does not exist. or not an onnx file. File: {input_onnx_file_path}'
+            )
+            sys.exit(1)
+
+        # MODEL_INDX print
+        if not args.non_verbose:
+            print(f'{Color.GREEN}INFO:{Color.RESET} MODEL_INDX={idx}: {input_onnx_file_path}')
 
     # Model combine
 
