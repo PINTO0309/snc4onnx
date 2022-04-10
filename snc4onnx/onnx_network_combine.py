@@ -196,10 +196,16 @@ def combine(
 
         ## 3. Output of onnx files in the process of fusion
         if output_of_onnx_file_in_the_process_of_fusion:
+            temp_file_path = f'{os.path.splitext(output_onnx_file_path)[0]}_{model_idx+1}{os.path.splitext(output_onnx_file_path)[1]}'
             onnx.save(
                 combined_model,
-                f'{os.path.splitext(output_onnx_file_path)[0]}_{model_idx+1}{os.path.splitext(output_onnx_file_path)[1]}'
+                temp_file_path
             )
+            if not non_verbose:
+                print(
+                    f'{Color.GREEN}INFO:{Color.RESET} '+
+                    f'Output the fusion result of model {model_idx} and model {model_idx+1}. File: {temp_file_path}'
+                )
 
     ## 4. Final save
     onnx.save(combined_model, output_onnx_file_path)
