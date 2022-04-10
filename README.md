@@ -109,7 +109,7 @@ combine(
 
     srcop_destop: List[str]
         The names of the output OP to join from and the input OP to join to are
-        [["out1,"in1"], ["out2","in2"], ["out3","in3"]] format.
+        [["out1","in1"], ["out2","in2"], ["out3","in3"]] format.
 
         In other words, to combine model1 and model2,
         srcop_destop =
@@ -149,4 +149,32 @@ combine(
     non_verbose: Optional[bool]
         Do not show all information logs. Only error logs are displayed.
         Default: False
+```
+
+## 4. CLI Execution
+```bash
+$ snc4onnx \
+--input_onnx_file_paths crestereo_init_iter2_120x160.onnx crestereo_next_iter2_240x320.onnx \
+--op_prefixes_after_merging init next \
+--srcop_destop output flow_init
+```
+
+## 5. In-script Execution
+```python
+from snc4onnx import combine
+
+combine(
+    input_onnx_file_paths = [
+        'crestereo_init_iter2_120x160.onnx',
+        'crestereo_next_iter2_240x320.onnx',
+    ],
+    op_prefixes_after_merging = [
+        'init',
+        'next',
+    ],
+    srcop_destop = [
+        ['output', 'flow_init']
+    ],
+    non_verbose = True,
+)
 ```
