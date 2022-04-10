@@ -36,6 +36,8 @@ def combine(
     input_onnx_file_paths: List[str],
     op_prefixes_after_merging: List[str],
     srcop_destop: List[str],
+    output_onnx_file_path: Optional[str] = 'merged_model.onnx',
+    output_of_onnx_file_in_the_process_of_fusion: Optional[bool] = False,
     non_verbose: Optional[bool] = False,
 ):
     """
@@ -77,6 +79,14 @@ def combine(
                 ],\n\
                 ...\n\
             ]
+
+    output_onnx_file_path: Optional[str]
+        Output onnx file path.\n\
+        Default: 'merged_model.onnx'
+
+    output_of_onnx_file_in_the_process_of_fusion: Optional[bool]
+        Output of onnx files in the process of fusion.\n\
+        Default: False
 
     non_verbose: Optional[bool]
         Do not show all information logs. Only error logs are displayed.\n\
@@ -136,19 +146,62 @@ def combine(
     # MODEL_INDX print
     for idx, (input_onnx_file_path, op_prefix_after_merging) in enumerate(zip(input_onnx_file_paths, op_prefixes_after_merging)):
         if not non_verbose:
-            print(f'{Color.GREEN}INFO:{Color.RESET} MODEL_INDX={idx}: {input_onnx_file_path}, prefix="{op_prefix_after_merging}"')
+            print(
+                f'{Color.GREEN}INFO:{Color.RESET} '+
+                f'MODEL_INDX={idx}: {input_onnx_file_path}, prefix="{op_prefix_after_merging}"'
+            )
 
     # Combine
-    ## 1. onnx load
+    ## 1. ONNX load
     onnx_graphs = []
     for onnx_path in input_onnx_file_paths:
         onnx_graphs.append(onnx.load(onnx_path))
 
     ## 2. Repeat Merge
-    for model_idx in range(0, len(onnx_graphs)-1):
-        src_model = onnx_graphs[model_idx]
-        dest_model = onnx_graphs[model_idx+1]
+    for model_idx in range(0, len(onnx_graphs) - 1):
 
+        if model_idx == 0:
+            src_model = onnx_graphs[model_idx]
+            dest_model = onnx_graphs[model_idx+1]
+            src_prefix = f'{op_prefixes_after_merging[model_idx]}_'
+        else:
+            src_model = combined_model
+            dest_model = onnx_graphs[model_idx+1]
+            src_prefix = ''
+
+        dest_prefix = f'{op_prefixes_after_merging[model_idx+1]}_'
+
+        src_model = onnx.compose.add_prefix(
+            src_model,
+            prefix=src_prefix
+        )
+        dest_model = onnx.compose.add_prefix(
+            dest_model,
+            prefix=dest_prefix
+        )
+
+        io_map = [
+            (
+                f'{src_prefix}{io_map_srcop_destop[0]}',
+                f'{dest_prefix}{io_map_srcop_destop[1]}'
+            ) for io_map_srcop_destop in srcop_destop[model_idx]
+        ]
+
+        combined_model = onnx.compose.merge_models(
+            src_model,
+            dest_model,
+            io_map=io_map
+        )
+
+        ## 3. Output of onnx files in the process of fusion
+        if output_of_onnx_file_in_the_process_of_fusion:
+            onnx.save(
+                combined_model,
+                f'{os.path.splitext(output_onnx_file_path)[0]}_{model_idx+1}{os.path.splitext(output_onnx_file_path)[1]}'
+            )
+
+    ## 4. Final save
+    onnx.save(combined_model, output_onnx_file_path)
 
 
 def main():
@@ -192,6 +245,17 @@ def main():
             '--srcop_destop combined_model1.2_src_op1 model3_dest_op1 combined_model1.2_src_op2 model3_dest_op2 ...'
     )
     parser.add_argument(
+        '--output_onnx_file_path',
+        type=str,
+        default='merged_model.onnx',
+        help='Output onnx file path.'
+    )
+    parser.add_argument(
+        '--output_of_onnx_file_in_the_process_of_fusion',
+        action='store_true',
+        help='Output of onnx files in the process of fusion.'
+    )
+    parser.add_argument(
         '--non_verbose',
         action='store_true',
         help='Do not show all information logs. Only error logs are displayed.'
@@ -204,6 +268,8 @@ def main():
         input_onnx_file_paths=args.input_onnx_file_paths,
         op_prefixes_after_merging=args.op_prefixes_after_merging,
         srcop_destop=args.srcop_destop,
+        output_onnx_file_path=args.output_onnx_file_path,
+        output_of_onnx_file_in_the_process_of_fusion=args.output_of_onnx_file_in_the_process_of_fusion,
         non_verbose=args.non_verbose,
     )
 
