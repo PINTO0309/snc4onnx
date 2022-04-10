@@ -83,11 +83,6 @@ def combine(
         Default: False
     """
 
-    """
-    Pattern
-        [1] out x1 : in x1
-        [2] out x1 : in xN
-    """
     for idx, input_onnx_file_path in enumerate(input_onnx_file_paths):
         # file existence check
         if not os.path.exists(input_onnx_file_path) or \
@@ -141,7 +136,7 @@ def combine(
     # MODEL_INDX print
     for idx, (input_onnx_file_path, op_prefix_after_merging) in enumerate(zip(input_onnx_file_paths, op_prefixes_after_merging)):
         if not non_verbose:
-            print(f'{Color.GREEN}INFO:{Color.RESET} MODEL_INDX={idx}: {input_onnx_file_path} prefix="{op_prefix_after_merging}"')
+            print(f'{Color.GREEN}INFO:{Color.RESET} MODEL_INDX={idx}: {input_onnx_file_path}, prefix="{op_prefix_after_merging}"')
 
     # Combine
     ## 1. onnx load
@@ -170,8 +165,8 @@ def main():
         type=str,
         required=True,
         nargs='+',
-        help='\
-            Since a single ONNX file cannot contain multiple OPs with the same name, '+
+        help=\
+            'Since a single ONNX file cannot contain multiple OPs with the same name, '+
             'a prefix is added to all OPs in each input ONNX model to avoid duplication. \n'+
             'Specify the same number of paths as input_onnx_file_paths. \n'+
             'e.g. --op_prefixes_after_merging model1_prefix model2_prefix model3_prefix ...'
@@ -182,8 +177,8 @@ def main():
         required=True,
         nargs='+',
         action='append',
-        help='\
-            The names of the output OP to join from and the input OP to join to are '+
+        help=\
+            'The names of the output OP to join from and the input OP to join to are '+
             'out1 in1 out2 in2 out3 in3 .... format. \n'+
             'In other words, to combine model1 and model2, '+
             '--srcop_destop model1_out1 model2_in1 model1_out2 model2_in2 \n'+
@@ -204,6 +199,7 @@ def main():
     args = parser.parse_args()
 
     # Model combine
+    print(len(args.srcop_destop))
     combine(
         input_onnx_file_paths=args.input_onnx_file_paths,
         op_prefixes_after_merging=args.op_prefixes_after_merging,
