@@ -160,6 +160,7 @@ def combine(
     ## 2. Repeat Merge
     for model_idx in range(0, len(onnx_graphs) - 1):
 
+        src_prefix = ''
         if model_idx == 0:
             src_model = onnx_graphs[model_idx]
             dest_model = onnx_graphs[model_idx+1]
