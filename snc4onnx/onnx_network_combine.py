@@ -114,6 +114,20 @@ def main():
         )
         sys.exit(1)
 
+    # Duplicate prefix check
+    def has_duplicates(seq):
+        seen = []
+        unique_list = [x for x in seq if x not in seen and not seen.append(x)]
+        return len(seq) != len(unique_list)
+
+    if has_duplicates(args.op_prefix_after_merging):
+        print(
+            f'{Color.RED}ERROR:{Color.RESET} '+
+            f'Duplicate values cannot be specified for op_prefix_after_merging.'
+        )
+        sys.exit(1)
+
+
     # onnx x2 -> srcop_distop x1
     # onnx x3 -> srcop_distop x2
     # onnx x4 -> srcop_distop x3
