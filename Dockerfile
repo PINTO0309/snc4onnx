@@ -10,5 +10,6 @@ RUN apt-get update && apt-get install -y \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install onnx \
+RUN pip install -U onnx \
+    && pip install -U onnx-simplifier \
     && pip install -U snc4onnx
