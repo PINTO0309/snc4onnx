@@ -178,3 +178,30 @@ combine(
     non_verbose = True,
 )
 ```
+
+## 6. Sample
+- Summary
+
+  ![image](https://user-images.githubusercontent.com/33194443/162609071-ddd7ba38-ad05-4a15-ad13-9ddfe2adec99.png)
+
+- Model.1
+
+  ![image](https://user-images.githubusercontent.com/33194443/162609250-e5a7f915-52f9-4550-8d1f-bcc02a75ff90.png)
+
+- Model.2
+
+  ![image](https://user-images.githubusercontent.com/33194443/162609270-7df7579f-2ba2-4ddd-abc7-4fef997fab44.png)
+
+- Merge
+
+  ```
+  $ snc4onnx \
+  --input_onnx_file_paths crestereo_init_iter2_120x160.onnx crestereo_next_iter2_240x320.onnx \
+  --op_prefixes_after_merging init next \
+  --srcop_destop output flow_init
+  ```
+
+- Result
+
+  ![image](https://user-images.githubusercontent.com/33194443/162609353-6e50c33c-ff0d-4cca-93fb-98636b605dbe.png)
+  ![image](https://user-images.githubusercontent.com/33194443/162609415-cb302fee-90f4-41a7-aadf-08d6de29b40c.png)
