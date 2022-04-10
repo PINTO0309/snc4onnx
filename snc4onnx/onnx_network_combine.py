@@ -2,8 +2,10 @@
 
 import sys
 import os
+import traceback
 from argparse import ArgumentParser
 import onnx
+from onnxsim import simplify
 from typing import Optional, List
 
 class Color:
@@ -148,7 +150,7 @@ def combine(
         if not non_verbose:
             print(
                 f'{Color.GREEN}INFO:{Color.RESET} '+
-                f'MODEL_INDX={idx}: {input_onnx_file_path}, prefix="{op_prefix_after_merging}"'
+                f'MODEL_INDX={idx+1}: {input_onnx_file_path}, prefix="{op_prefix_after_merging}"'
             )
 
     # Combine
@@ -181,12 +183,7 @@ def combine(
             prefix=dest_prefix
         )
 
-        io_map = [
-            (
-                f'{src_prefix}{io_map_srcop_destop[0]}',
-                f'{dest_prefix}{io_map_srcop_destop[1]}'
-            ) for io_map_srcop_destop in srcop_destop[model_idx]
-        ]
+        io_map = [(f'{src_prefix}{io_map_srcop_destop[0]}', f'{dest_prefix}{io_map_srcop_destop[1]}') for io_map_srcop_destop in srcop_destop]
 
         combined_model = onnx.compose.merge_models(
             src_model,
@@ -194,7 +191,7 @@ def combine(
             io_map=io_map
         )
 
-        ## 3. Output of onnx files in the process of fusion
+        ## Output of onnx files in the process of fusion
         if output_of_onnx_file_in_the_process_of_fusion:
             temp_file_path = f'{os.path.splitext(output_onnx_file_path)[0]}_{model_idx+1}{os.path.splitext(output_onnx_file_path)[1]}'
             onnx.save(
@@ -204,11 +201,26 @@ def combine(
             if not non_verbose:
                 print(
                     f'{Color.GREEN}INFO:{Color.RESET} '+
-                    f'Output the fusion result of model {model_idx} and model {model_idx+1}. File: {temp_file_path}'
+                    f'Output the fusion result of model {model_idx+1} and model {model_idx+2}. File: {temp_file_path}'
                 )
+
+    ## 3. Optimize
+    try:
+        combined_model, check = simplify(combined_model)
+    except Exception as e:
+        if not non_verbose:
+            print(
+                f'{Color.YELLOW}WARNING:{Color.RESET} '+
+                'Failed to optimize the combined onnx file.'
+            )
+            tracetxt = traceback.format_exc().splitlines()[-1]
+            print(f'{Color.YELLOW}WARNING:{Color.RESET} {tracetxt}')
 
     ## 4. Final save
     onnx.save(combined_model, output_onnx_file_path)
+
+    if not non_verbose:
+        print(f'{Color.GREEN}INFO:{Color.RESET} Finish!')
 
 
 def main():
