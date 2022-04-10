@@ -41,8 +41,39 @@ def main():
         '--input_onnx_file_paths',
         type=str,
         required=True,
-        nargs='*',
-        help='Input onnx file paths.'
+        nargs='+',
+        help='Input onnx file paths. At least two onnx files must be specified.'
+    )
+    parser.add_argument(
+        '--op_prefix_after_merging',
+        type=str,
+        required=True,
+        nargs='+',
+        help='\
+            Since a single ONNX file cannot contain multiple OPs with the same name, '+
+            'a prefix is added to all OPs in each input ONNX model to avoid duplication. \n'+
+            'Specify the same number of paths as input_onnx_file_paths. \n'+
+            'e.g. --op_prefix_after_merging model1_prefix model2_prefix model3_prefix ...'
+    )
+    parser.add_argument(
+        '--srcop_distop',
+        type=str,
+        required=True,
+        nargs='+',
+        action='append',
+        help='\
+            The names of the output OP to join from and the input OP to join to are '+
+            'out1 in1 out2 in2 out3 in3 .... format. \n'+
+            'In other words, to combine model1 and model2, '+
+            '--srcop_distop model1_out1 model2_in1 model1_out2 model2_in2 \n'+
+            'Also, --srcop_distop can be specified multiple times. \n'+
+            'The first --srcop_distop specifies the correspondence between model1 and model2, '+
+            'and the second --srcop_distop specifies the correspondence between model1 and model2 combined and model3. \n'+
+            'It is necessary to take into account that the prefix specified '+
+            'in op_prefix_after_merging is given at the beginning of each OP name. \n'+
+            'e.g. To combine model1 with model2 and model3. \n'+
+            '--srcop_distop model1_src_op1 model2_dist_op1 model1_src_op2 model2_dist_op2 ... \n'+
+            '--srcop_distop combined_model_src_op1 model3_dist_op1 combined_model_src_op2 model3_dist_op2 ...'
     )
     parser.add_argument(
         '--non_verbose',
@@ -56,7 +87,6 @@ def main():
         [1] out x1 : in x1
         [2] out x1 : in xN
     """
-
     for idx, input_onnx_file_path in enumerate(args.input_onnx_file_paths):
         # file existence check
         if not os.path.exists(input_onnx_file_path) or \
@@ -68,9 +98,40 @@ def main():
             )
             sys.exit(1)
 
-        # MODEL_INDX print
+    # Two or more ONNX files must be specified
+    if len(args.input_onnx_file_paths) <= 1:
+        print(
+            f'{Color.RED}ERROR:{Color.RESET} '+
+            f'Two or more input_onnx_file_paths must be specified.'
+        )
+        sys.exit(1)
+
+    # Match check between number of onnx files and number of prefixes
+    if len(args.input_onnx_file_paths) != len(args.op_prefix_after_merging):
+        print(
+            f'{Color.RED}ERROR:{Color.RESET} '+
+            f'The number of input_onnx_file_paths must match the number of op_prefix_after_merging.'
+        )
+        sys.exit(1)
+
+    # onnx x2 -> srcop_distop x1
+    # onnx x3 -> srcop_distop x2
+    # onnx x4 -> srcop_distop x3
+    if len(args.input_onnx_file_paths) - 1 != len(args.srcop_distop):
+        print(
+            f'{Color.RED}ERROR:{Color.RESET} '+
+            f'The number of srcop_distops must be (number of input_onnx_file_paths - 1).'
+        )
+        sys.exit(1)
+
+    # MODEL_INDX print
+    for idx, input_onnx_file_path in enumerate(args.input_onnx_file_paths):
         if not args.non_verbose:
             print(f'{Color.GREEN}INFO:{Color.RESET} MODEL_INDX={idx}: {input_onnx_file_path}')
+
+
+    print(args.srcop_distop)
+    print(len(args.srcop_distop))
 
     # Model combine
 
