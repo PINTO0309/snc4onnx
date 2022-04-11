@@ -35,20 +35,17 @@ class Color:
 
 
 def combine(
-    input_onnx_file_paths: List[str],
     op_prefixes_after_merging: List[str],
     srcop_destop: List[str],
-    output_onnx_file_path: Optional[str] = 'merged_model.onnx',
+    input_onnx_file_paths: Optional[List[str]] = [],
+    onnx_graphs: Optional[List[onnx.ModelProto]] = [],
+    output_onnx_file_path: Optional[str] = '',
     output_of_onnx_file_in_the_process_of_fusion: Optional[bool] = False,
     non_verbose: Optional[bool] = False,
-):
+) -> onnx.ModelProto:
     """
     Parameters
     ----------
-    input_onnx_file_paths: List[str]
-        Input onnx file paths. At least two onnx files must be specified.
-        e.g. input_onnx_file_paths=["model1.onnx","model2.onnx","model3.onnx", ...]
-
     op_prefixes_after_merging: List[str]
         Since a single ONNX file cannot contain multiple OPs with the same name,\n\
         a prefix is added to all OPs in each input ONNX model to avoid duplication.\n\
@@ -82,9 +79,22 @@ def combine(
                 ...\n\
             ]
 
+    input_onnx_file_paths: Optional[List[str]]
+        Input onnx file paths. At least two onnx files must be specified.\n\
+        Either input_onnx_file_paths or onnx_graphs must be specified.\n\
+        onnx_graphs If specified, ignore input_onnx_file_paths and process onnx_graphs.\n\
+        e.g. input_onnx_file_paths = ["model1.onnx", "model2.onnx", "model3.onnx", ...]
+
+    onnx_graphs: Optional[List[onnx.ModelProto]]
+        List of onnx.ModelProto. At least two onnx graphs must be specified.\n\
+        Either input_onnx_file_paths or onnx_graphs must be specified.\n\
+        onnx_graphs If specified, ignore input_onnx_file_paths and process onnx_graphs.\n\
+        e.g. onnx_graphs = [graph1, graph2, graph3, ...]
+
     output_onnx_file_path: Optional[str]
         Output onnx file path.\n\
-        Default: 'merged_model.onnx'
+        If not specified, .onnx is not output.\n\
+        Default: ''
 
     output_of_onnx_file_in_the_process_of_fusion: Optional[bool]
         Output of onnx files in the process of fusion.\n\
@@ -93,34 +103,86 @@ def combine(
     non_verbose: Optional[bool]
         Do not show all information logs. Only error logs are displayed.\n\
         Default: False
+
+    Returns
+    -------
+    combined_graph: onnx.ModelProto
+        Combined onnx ModelProto
     """
 
-    for idx, input_onnx_file_path in enumerate(input_onnx_file_paths):
-        # file existence check
-        if not os.path.exists(input_onnx_file_path) or \
-            not os.path.isfile(input_onnx_file_path) or \
-            not os.path.splitext(input_onnx_file_path)[-1] == '.onnx':
+    # One of input_onnx_file_paths or onnx_graphs must be specified
+    if len(input_onnx_file_paths) == 0 and len(onnx_graphs) == 0:
+        print(
+            f'{Color.RED}ERROR:{Color.RESET} '+
+            f'Either input_onnx_file_paths or onnx_graphs must be specified.'
+        )
+        sys.exit(1)
+
+    # onnx_graphs check or input_onnx_file_paths check
+    if len(onnx_graphs) > 0:
+        # onnx_graphs
+        if len(onnx_graphs) == 1:
             print(
                 f'{Color.RED}ERROR:{Color.RESET} '+
-                f'The specified file (.onnx) does not exist. or not an onnx file. File: {input_onnx_file_path}'
+                f'At least two onnx graphs must be specified.'
             )
             sys.exit(1)
 
-    # Two or more ONNX files must be specified
-    if len(input_onnx_file_paths) <= 1:
-        print(
-            f'{Color.RED}ERROR:{Color.RESET} '+
-            f'Two or more input_onnx_file_paths must be specified.'
-        )
-        sys.exit(1)
+        # Match check between number of onnx_graphs and number of prefixes
+        if len(onnx_graphs) != len(op_prefixes_after_merging):
+            print(
+                f'{Color.RED}ERROR:{Color.RESET} '+
+                f'The number of onnx_graphs must match the number of op_prefixes_after_merging.'
+            )
+            sys.exit(1)
 
-    # Match check between number of onnx files and number of prefixes
-    if len(input_onnx_file_paths) != len(op_prefixes_after_merging):
-        print(
-            f'{Color.RED}ERROR:{Color.RESET} '+
-            f'The number of input_onnx_file_paths must match the number of op_prefixes_after_merging.'
-        )
-        sys.exit(1)
+        # onnx x2 -> srcop_destop x1
+        # onnx x3 -> srcop_destop x2
+        # onnx x4 -> srcop_destop x3
+        if len(onnx_graphs) - 1 != len(srcop_destop):
+            print(
+                f'{Color.RED}ERROR:{Color.RESET} '+
+                f'The number of srcop_destops must be (number of onnx_graphs - 1).'
+            )
+            sys.exit(1)
+
+    else:
+        # input_onnx_file_paths
+        if len(input_onnx_file_paths) == 1:
+            print(
+                f'{Color.RED}ERROR:{Color.RESET} '+
+                f'At least two input onnx file paths must be specified.'
+            )
+            sys.exit(1)
+
+        # file existence check
+        for idx, input_onnx_file_path in enumerate(input_onnx_file_paths):
+            if not os.path.exists(input_onnx_file_path) or \
+                not os.path.isfile(input_onnx_file_path) or \
+                not os.path.splitext(input_onnx_file_path)[-1] == '.onnx':
+                print(
+                    f'{Color.RED}ERROR:{Color.RESET} '+
+                    f'The specified file (.onnx) does not exist. or not an onnx file. File: {input_onnx_file_path}'
+                )
+                sys.exit(1)
+
+        # Match check between number of onnx files and number of prefixes
+        if len(input_onnx_file_paths) != len(op_prefixes_after_merging):
+            print(
+                f'{Color.RED}ERROR:{Color.RESET} '+
+                f'The number of input_onnx_file_paths must match the number of op_prefixes_after_merging.'
+            )
+            sys.exit(1)
+
+        # onnx x2 -> srcop_destop x1
+        # onnx x3 -> srcop_destop x2
+        # onnx x4 -> srcop_destop x3
+        if len(input_onnx_file_paths) - 1 != len(srcop_destop):
+            print(
+                f'{Color.RED}ERROR:{Color.RESET} '+
+                f'The number of srcop_destops must be (number of input_onnx_file_paths - 1).'
+            )
+            sys.exit(1)
 
     # Duplicate prefix check
     def has_duplicates(seq):
@@ -135,41 +197,36 @@ def combine(
         )
         sys.exit(1)
 
-    # onnx x2 -> srcop_destop x1
-    # onnx x3 -> srcop_destop x2
-    # onnx x4 -> srcop_destop x3
-    if len(input_onnx_file_paths) - 1 != len(srcop_destop):
-        print(
-            f'{Color.RED}ERROR:{Color.RESET} '+
-            f'The number of srcop_destops must be (number of input_onnx_file_paths - 1).'
-        )
-        sys.exit(1)
-
-    # MODEL_INDX print
-    for idx, (input_onnx_file_path, op_prefix_after_merging) in enumerate(zip(input_onnx_file_paths, op_prefixes_after_merging)):
-        if not non_verbose:
-            print(
-                f'{Color.GREEN}INFO:{Color.RESET} '+
-                f'MODEL_INDX={idx+1}: {input_onnx_file_path}, prefix="{op_prefix_after_merging}"'
-            )
+    # MODEL_INDX print - only input_onnx_file_paths
+    if len(onnx_graphs) == 0:
+        for idx, (input_onnx_file_path, op_prefix_after_merging) in enumerate(zip(input_onnx_file_paths, op_prefixes_after_merging)):
+            if not non_verbose:
+                print(
+                    f'{Color.GREEN}INFO:{Color.RESET} '+
+                    f'MODEL_INDX={idx+1}: {input_onnx_file_path}, prefix="{op_prefix_after_merging}"'
+                )
 
     # Combine
     ## 1. ONNX load
-    onnx_graphs = []
-    for onnx_path in input_onnx_file_paths:
-        onnx_graphs.append(onnx.load(onnx_path))
+    tmp_onnx_graphs = []
+    if len(onnx_graphs) > 0:
+        for onnx_graph in onnx_graphs:
+            tmp_onnx_graphs.append(onnx_graph)
+    else:
+        for onnx_path in input_onnx_file_paths:
+            tmp_onnx_graphs.append(onnx.load(onnx_path))
 
     ## 2. Repeat Merge
-    for model_idx in range(0, len(onnx_graphs) - 1):
+    for model_idx in range(0, len(tmp_onnx_graphs) - 1):
 
         src_prefix = ''
         if model_idx == 0:
-            src_model = onnx_graphs[model_idx]
-            dest_model = onnx_graphs[model_idx+1]
+            src_model = tmp_onnx_graphs[model_idx]
+            dest_model = tmp_onnx_graphs[model_idx+1]
             src_prefix = f'{op_prefixes_after_merging[model_idx]}_'
         else:
             src_model = combined_model
-            dest_model = onnx_graphs[model_idx+1]
+            dest_model = tmp_onnx_graphs[model_idx+1]
             src_prefix = ''
 
         dest_prefix = f'{op_prefixes_after_merging[model_idx+1]}_'
@@ -192,7 +249,7 @@ def combine(
         )
 
         ## Output of onnx files in the process of fusion
-        if output_of_onnx_file_in_the_process_of_fusion:
+        if output_of_onnx_file_in_the_process_of_fusion and output_onnx_file_path:
             temp_file_path = f'{os.path.splitext(output_onnx_file_path)[0]}_{model_idx+1}{os.path.splitext(output_onnx_file_path)[1]}'
             onnx.save(
                 combined_model,
@@ -217,10 +274,14 @@ def combine(
             print(f'{Color.YELLOW}WARNING:{Color.RESET} {tracetxt}')
 
     ## 4. Final save
-    onnx.save(combined_model, output_onnx_file_path)
+    if output_onnx_file_path:
+        onnx.save(combined_model, output_onnx_file_path)
 
     if not non_verbose:
         print(f'{Color.GREEN}INFO:{Color.RESET} Finish!')
+
+    # 5. Return
+    return combined_model
 
 
 def main():
@@ -282,15 +343,15 @@ def main():
     args = parser.parse_args()
 
     # Model combine
-    print(len(args.srcop_destop))
-    combine(
-        input_onnx_file_paths=args.input_onnx_file_paths,
+    combined_model = combine(
         op_prefixes_after_merging=args.op_prefixes_after_merging,
         srcop_destop=args.srcop_destop,
+        input_onnx_file_paths=args.input_onnx_file_paths,
         output_onnx_file_path=args.output_onnx_file_path,
         output_of_onnx_file_in_the_process_of_fusion=args.output_of_onnx_file_in_the_process_of_fusion,
         non_verbose=args.non_verbose,
     )
+
 
 if __name__ == '__main__':
     main()

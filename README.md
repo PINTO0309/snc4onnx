@@ -3,9 +3,6 @@ Simple tool to combine onnx models. **S**imple **N**etwork **C**ombine Tool for 
 
 [![Downloads](https://static.pepy.tech/personalized-badge/snc4onnx?period=total&units=none&left_color=grey&right_color=brightgreen&left_text=Downloads)](https://pepy.tech/project/snc4onnx) ![GitHub](https://img.shields.io/github/license/PINTO0309/snc4onnx?color=2BAF2B) [![PyPI](https://img.shields.io/pypi/v/snc4onnx?color=2BAF2B)](https://pypi.org/project/snc4onnx/) [![CodeQL](https://github.com/PINTO0309/snc4onnx/workflows/CodeQL/badge.svg)](https://github.com/PINTO0309/snc4onnx/actions?query=workflow%3ACodeQL)
 
-## ToDo
-- [ ] Change backend to onnx-graphsurgeon so that onnx.ModelProto can be specified as input.
-
 ## 1. Setup
 ### 1-1. HostPC
 ```bash
@@ -91,20 +88,17 @@ $ python
 Help on function combine in module snc4onnx.onnx_network_combine:
 
 combine(
-    input_onnx_file_paths: List[str],
-    op_prefixes_after_merging: List[str],
-    srcop_destop: List[str],
-    output_onnx_file_path: Union[str, NoneType] = 'merged_model.onnx',
-    output_of_onnx_file_in_the_process_of_fusion: Union[bool, NoneType] = False,
-    non_verbose: Union[bool, NoneType] = False
-)
+  op_prefixes_after_merging: List[str],
+  srcop_destop: List[str],
+  input_onnx_file_paths: Union[List[str], NoneType] = [],
+  onnx_graphs: Union[List[onnx.onnx_ml_pb2.ModelProto], NoneType] = [],
+  output_onnx_file_path: Union[str, NoneType] = '',
+  output_of_onnx_file_in_the_process_of_fusion: Union[bool, NoneType] = False,
+  non_verbose: Union[bool, NoneType] = False
+) -> onnx.onnx_ml_pb2.ModelProto
 
     Parameters
     ----------
-    input_onnx_file_paths: List[str]
-        Input onnx file paths. At least two onnx files must be specified.
-        e.g. input_onnx_file_paths=["model1.onnx","model2.onnx","model3.onnx", ...]
-
     op_prefixes_after_merging: List[str]
         Since a single ONNX file cannot contain multiple OPs with the same name,
         a prefix is added to all OPs in each input ONNX model to avoid duplication.
@@ -142,9 +136,22 @@ combine(
                 ...
             ]
 
+    input_onnx_file_paths: Optional[List[str]]
+        Input onnx file paths. At least two onnx files must be specified.
+        Either input_onnx_file_paths or onnx_graphs must be specified.
+        onnx_graphs If specified, ignore input_onnx_file_paths and process onnx_graphs.
+        e.g. input_onnx_file_paths = ["model1.onnx", "model2.onnx", "model3.onnx", ...]
+
+    onnx_graphs: Optional[List[onnx.ModelProto]]
+        List of onnx.ModelProto. At least two onnx graphs must be specified.
+        Either input_onnx_file_paths or onnx_graphs must be specified.
+        onnx_graphs If specified, ignore input_onnx_file_paths and process onnx_graphs.
+        e.g. onnx_graphs = [graph1, graph2, graph3, ...]
+
     output_onnx_file_path: Optional[str]
         Output onnx file path.
-        Default: 'merged_model.onnx'
+        If not specified, .onnx is not output.
+        Default: ''
 
     output_of_onnx_file_in_the_process_of_fusion: Optional[bool]
         Output of onnx files in the process of fusion.
@@ -153,6 +160,11 @@ combine(
     non_verbose: Optional[bool]
         Do not show all information logs. Only error logs are displayed.
         Default: False
+
+    Returns
+    -------
+    combined_graph: onnx.ModelProto
+        Combined onnx ModelProto
 ```
 
 ## 4. CLI Execution
@@ -164,20 +176,41 @@ $ snc4onnx \
 ```
 
 ## 5. In-script Execution
+### 5-1. ONNX files
 ```python
 from snc4onnx import combine
 
-combine(
-    input_onnx_file_paths = [
-        'crestereo_init_iter2_120x160.onnx',
-        'crestereo_next_iter2_240x320.onnx',
-    ],
+combined_graph = combine(
     op_prefixes_after_merging = [
         'init',
         'next',
     ],
     srcop_destop = [
         ['output', 'flow_init']
+    ],
+    input_onnx_file_paths = [
+        'crestereo_init_iter2_120x160.onnx',
+        'crestereo_next_iter2_240x320.onnx',
+    ],
+    non_verbose = True,
+)
+```
+### 5-2. onnx.ModelProtos
+```python
+from snc4onnx import combine
+
+combined_graph = combine(
+    op_prefixes_after_merging = [
+        'init',
+        'next',
+    ],
+    srcop_destop = [
+        ['output', 'flow_init']
+    ],
+    onnx_graphs = [
+        graph1,
+        graph2,
+        graph3,
     ],
     non_verbose = True,
 )
