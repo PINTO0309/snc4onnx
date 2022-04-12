@@ -250,4 +250,5 @@ combined_graph = combine(
 2. https://github.com/PINTO0309/sne4onnx
 3. https://github.com/PINTO0309/snd4onnx
 4. https://github.com/PINTO0309/scs4onnx
-5. https://github.com/PINTO0309/PINTO_model_zoo
+5. https://github.com/PINTO0309/sog4onnx
+6. https://github.com/PINTO0309/PINTO_model_zoo
