@@ -1,5 +1,5 @@
 # snc4onnx
-Simple tool to combine onnx models. **S**imple **N**etwork **C**ombine Tool for **ONNX**.
+Simple tool to combine(merge) onnx models. **S**imple **N**etwork **C**ombine Tool for **ONNX**.
 
 https://github.com/PINTO0309/simple-onnx-processing-tools
 
