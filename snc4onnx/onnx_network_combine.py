@@ -5,6 +5,7 @@ import os
 import traceback
 from argparse import ArgumentParser
 import onnx
+import onnx_graphsurgeon as gs
 from onnxsim import simplify
 from typing import Optional, List
 
@@ -211,10 +212,14 @@ def combine(
     tmp_onnx_graphs = []
     if len(onnx_graphs) > 0:
         for onnx_graph in onnx_graphs:
-            tmp_onnx_graphs.append(onnx_graph)
+            gs_graph = gs.import_onnx(onnx_graph)
+            gs_graph.cleanup().toposort()
+            tmp_onnx_graphs.append(gs.export_onnx(gs_graph))
     else:
         for onnx_path in input_onnx_file_paths:
-            tmp_onnx_graphs.append(onnx.load(onnx_path))
+            gs_graph = gs.import_onnx(onnx.load(onnx_path))
+            gs_graph.cleanup().toposort()
+            tmp_onnx_graphs.append(gs.export_onnx(gs_graph))
 
     ## 2. Repeat Merge
     for model_idx in range(0, len(tmp_onnx_graphs) - 1):
