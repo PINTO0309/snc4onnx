@@ -174,8 +174,8 @@ combine(
 ```bash
 $ snc4onnx \
 --input_onnx_file_paths crestereo_init_iter2_120x160.onnx crestereo_next_iter2_240x320.onnx \
---op_prefixes_after_merging init next \
---srcop_destop output flow_init
+--srcop_destop output flow_init \
+--op_prefixes_after_merging init next
 ```
 
 ## 5. In-script Execution
