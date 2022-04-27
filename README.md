@@ -38,8 +38,8 @@ $ snc4onnx -h
 usage:
   snc4onnx [-h]
     --input_onnx_file_paths INPUT_ONNX_FILE_PATHS [INPUT_ONNX_FILE_PATHS ...]
-    --op_prefixes_after_merging OP_PREFIXES_AFTER_MERGING [OP_PREFIXES_AFTER_MERGING ...]
     --srcop_destop SRCOP_DESTOP [SRCOP_DESTOP ...]
+    [--op_prefixes_after_merging OP_PREFIXES_AFTER_MERGING [OP_PREFIXES_AFTER_MERGING ...]]
     [--output_onnx_file_path OUTPUT_ONNX_FILE_PATH]
     [--output_of_onnx_file_in_the_process_of_fusion]
     [--non_verbose]
@@ -50,12 +50,6 @@ optional arguments:
 
   --input_onnx_file_paths INPUT_ONNX_FILE_PATHS [INPUT_ONNX_FILE_PATHS ...]
     Input onnx file paths. At least two onnx files must be specified.
-
-  --op_prefixes_after_merging OP_PREFIXES_AFTER_MERGING [OP_PREFIXES_AFTER_MERGING ...]
-    Since a single ONNX file cannot contain multiple OPs with the same name,
-    a prefix is added to all OPs in each input ONNX model to avoid duplication.
-    Specify the same number of paths as input_onnx_file_paths.
-    e.g. --op_prefixes_after_merging model1_prefix model2_prefix model3_prefix ...
 
   --srcop_destop SRCOP_DESTOP [SRCOP_DESTOP ...]
     The names of the output OP to join from and the input OP to join to are
@@ -71,6 +65,12 @@ optional arguments:
     e.g. To combine model1 with model2 and model3.
     --srcop_destop model1_src_op1 model2_dest_op1 model1_src_op2 model2_dest_op2 ...
     --srcop_destop comb_model12_src_op1 model3_dest_op1 comb_model12_src_op2 model3_dest_op2 ...
+
+  --op_prefixes_after_merging OP_PREFIXES_AFTER_MERGING [OP_PREFIXES_AFTER_MERGING ...]
+    Since a single ONNX file cannot contain multiple OPs with the same name,
+    a prefix is added to all OPs in each input ONNX model to avoid duplication.
+    Specify the same number of paths as input_onnx_file_paths.
+    e.g. --op_prefixes_after_merging model1_prefix model2_prefix model3_prefix ...
 
   --output_onnx_file_path OUTPUT_ONNX_FILE_PATH
     Output onnx file path.
@@ -91,8 +91,8 @@ $ python
 Help on function combine in module snc4onnx.onnx_network_combine:
 
 combine(
-  op_prefixes_after_merging: List[str],
   srcop_destop: List[str],
+  op_prefixes_after_merging: Union[List[str], NoneType] = [],
   input_onnx_file_paths: Union[List[str], NoneType] = [],
   onnx_graphs: Union[List[onnx.onnx_ml_pb2.ModelProto], NoneType] = [],
   output_onnx_file_path: Union[str, NoneType] = '',
@@ -102,12 +102,6 @@ combine(
 
     Parameters
     ----------
-    op_prefixes_after_merging: List[str]
-        Since a single ONNX file cannot contain multiple OPs with the same name,
-        a prefix is added to all OPs in each input ONNX model to avoid duplication.
-        Specify the same number of paths as input_onnx_file_paths.
-        e.g. op_prefixes_after_merging = ["model1_prefix","model2_prefix","model3_prefix", ...]
-
     srcop_destop: List[str]
         The names of the output OP to join from and the input OP to join to are
         [["out1","in1"], ["out2","in2"], ["out3","in3"]] format.
@@ -138,6 +132,12 @@ combine(
                 ],
                 ...
             ]
+
+    op_prefixes_after_merging: List[str]
+        Since a single ONNX file cannot contain multiple OPs with the same name,
+        a prefix is added to all OPs in each input ONNX model to avoid duplication.
+        Specify the same number of paths as input_onnx_file_paths.
+        e.g. op_prefixes_after_merging = ["model1_prefix","model2_prefix","model3_prefix", ...]
 
     input_onnx_file_paths: Optional[List[str]]
         Input onnx file paths. At least two onnx files must be specified.
@@ -184,12 +184,12 @@ $ snc4onnx \
 from snc4onnx import combine
 
 combined_graph = combine(
+    srcop_destop = [
+        ['output', 'flow_init']
+    ],
     op_prefixes_after_merging = [
         'init',
         'next',
-    ],
-    srcop_destop = [
-        ['output', 'flow_init']
     ],
     input_onnx_file_paths = [
         'crestereo_init_iter2_120x160.onnx',
@@ -203,12 +203,12 @@ combined_graph = combine(
 from snc4onnx import combine
 
 combined_graph = combine(
+    srcop_destop = [
+        ['output', 'flow_init']
+    ],
     op_prefixes_after_merging = [
         'init',
         'next',
-    ],
-    srcop_destop = [
-        ['output', 'flow_init']
     ],
     onnx_graphs = [
         graph1,

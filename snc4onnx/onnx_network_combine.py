@@ -3,6 +3,7 @@
 import sys
 import os
 import traceback
+import collections
 from argparse import ArgumentParser
 import onnx
 import onnx_graphsurgeon as gs
@@ -36,8 +37,8 @@ class Color:
 
 
 def combine(
-    op_prefixes_after_merging: List[str],
     srcop_destop: List[str],
+    op_prefixes_after_merging: Optional[List[str]] = [],
     input_onnx_file_paths: Optional[List[str]] = [],
     onnx_graphs: Optional[List[onnx.ModelProto]] = [],
     output_onnx_file_path: Optional[str] = '',
@@ -47,12 +48,6 @@ def combine(
     """
     Parameters
     ----------
-    op_prefixes_after_merging: List[str]
-        Since a single ONNX file cannot contain multiple OPs with the same name,\n\
-        a prefix is added to all OPs in each input ONNX model to avoid duplication.\n\
-        Specify the same number of paths as input_onnx_file_paths.\n\
-        e.g. op_prefixes_after_merging = ["model1_prefix","model2_prefix","model3_prefix", ...]
-
     srcop_destop: List[str]
         The names of the output OP to join from and the input OP to join to are\n\
         [["out1,"in1"], ["out2","in2"], ["out3","in3"]] format.\n\n\
@@ -79,6 +74,12 @@ def combine(
                 ],\n\
                 ...\n\
             ]
+
+    op_prefixes_after_merging: Optional[List[str]]
+        Since a single ONNX file cannot contain multiple OPs with the same name,\n\
+        a prefix is added to all OPs in each input ONNX model to avoid duplication.\n\
+        Specify the same number of paths as input_onnx_file_paths.\n\
+        e.g. op_prefixes_after_merging = ["model1_prefix","model2_prefix","model3_prefix", ...]
 
     input_onnx_file_paths: Optional[List[str]]
         Input onnx file paths. At least two onnx files must be specified.\n\
@@ -120,6 +121,9 @@ def combine(
         sys.exit(1)
 
     # onnx_graphs check or input_onnx_file_paths check
+    if not op_prefixes_after_merging:
+        op_prefixes_after_merging = []
+
     if len(onnx_graphs) > 0:
         # onnx_graphs
         if len(onnx_graphs) == 1:
@@ -130,7 +134,7 @@ def combine(
             sys.exit(1)
 
         # Match check between number of onnx_graphs and number of prefixes
-        if len(onnx_graphs) != len(op_prefixes_after_merging):
+        if op_prefixes_after_merging and len(onnx_graphs) != len(op_prefixes_after_merging):
             print(
                 f'{Color.RED}ERROR:{Color.RESET} '+
                 f'The number of onnx_graphs must match the number of op_prefixes_after_merging.'
@@ -168,7 +172,7 @@ def combine(
                 sys.exit(1)
 
         # Match check between number of onnx files and number of prefixes
-        if len(input_onnx_file_paths) != len(op_prefixes_after_merging):
+        if op_prefixes_after_merging and len(input_onnx_file_paths) != len(op_prefixes_after_merging):
             print(
                 f'{Color.RED}ERROR:{Color.RESET} '+
                 f'The number of input_onnx_file_paths must match the number of op_prefixes_after_merging.'
@@ -191,7 +195,7 @@ def combine(
         unique_list = [x for x in seq if x not in seen and not seen.append(x)]
         return len(seq) != len(unique_list)
 
-    if has_duplicates(op_prefixes_after_merging):
+    if op_prefixes_after_merging and has_duplicates(op_prefixes_after_merging):
         print(
             f'{Color.RED}ERROR:{Color.RESET} '+
             f'Duplicate values cannot be specified for op_prefixes_after_merging.'
@@ -225,25 +229,55 @@ def combine(
     for model_idx in range(0, len(tmp_onnx_graphs) - 1):
 
         src_prefix = ''
+        dest_prefix = ''
+
         if model_idx == 0:
             src_model = tmp_onnx_graphs[model_idx]
             dest_model = tmp_onnx_graphs[model_idx+1]
-            src_prefix = f'{op_prefixes_after_merging[model_idx]}_'
+            if op_prefixes_after_merging:
+                src_prefix = f'{op_prefixes_after_merging[model_idx]}_'
+                dest_prefix = f'{op_prefixes_after_merging[model_idx+1]}_'
         else:
             src_model = combined_model
             dest_model = tmp_onnx_graphs[model_idx+1]
-            src_prefix = ''
+            if op_prefixes_after_merging:
+                src_prefix = ''
+                dest_prefix = f'{op_prefixes_after_merging[model_idx+1]}_'
 
-        dest_prefix = f'{op_prefixes_after_merging[model_idx+1]}_'
+        if op_prefixes_after_merging:
+            src_model = onnx.compose.add_prefix(
+                src_model,
+                prefix=src_prefix
+            )
+            dest_model = onnx.compose.add_prefix(
+                dest_model,
+                prefix=dest_prefix
+            )
 
-        src_model = onnx.compose.add_prefix(
-            src_model,
-            prefix=src_prefix
-        )
-        dest_model = onnx.compose.add_prefix(
-            dest_model,
-            prefix=dest_prefix
-        )
+        # Duplicate OP name check
+        src_model_op_names = \
+            [graph_node.name for graph_node in src_model.graph.node] + \
+            [graph_input.name for graph_input in src_model.graph.input] + \
+            [graph_output.name for graph_output in src_model.graph.output]
+        dest_model_op_names = \
+            [graph_node.name for graph_node in dest_model.graph.node] + \
+            [graph_input.name for graph_input in dest_model.graph.input] + \
+            [graph_output.name for graph_output in dest_model.graph.output]
+        merged_model_op_names = src_model_op_names + dest_model_op_names
+        op_name_count = collections.Counter(merged_model_op_names)
+        dup_msg = ''
+        for op_name, count in op_name_count.items():
+            if count > 1:
+                dup_msg = f'{dup_msg}op_name:{op_name} count:{count}, '
+        dup_msg = dup_msg.rstrip(', ')
+        if dup_msg:
+            print(
+                f'{Color.RED}ERROR:{Color.RESET} '+
+                f'\nThere is a duplicate OP name after merging models.\n' +
+                f'{dup_msg}\n' +
+                f'Avoid duplicate OP names by specifying a prefix in op_prefixes_after_merging.'
+            )
+            sys.exit(1)
 
         io_map = [(f'{src_prefix}{io_map_srcop_destop[0]}', f'{dest_prefix}{io_map_srcop_destop[1]}') for io_map_srcop_destop in srcop_destop]
 
@@ -299,17 +333,6 @@ def main():
         help='Input onnx file paths. At least two onnx files must be specified.'
     )
     parser.add_argument(
-        '--op_prefixes_after_merging',
-        type=str,
-        required=True,
-        nargs='+',
-        help=\
-            'Since a single ONNX file cannot contain multiple OPs with the same name, '+
-            'a prefix is added to all OPs in each input ONNX model to avoid duplication. \n'+
-            'Specify the same number of paths as input_onnx_file_paths. \n'+
-            'e.g. --op_prefixes_after_merging model1_prefix model2_prefix model3_prefix ...'
-    )
-    parser.add_argument(
         '--srcop_destop',
         type=str,
         required=True,
@@ -328,6 +351,16 @@ def main():
             'e.g. To combine model1 with model2 and model3. \n'+
             '--srcop_destop model1_src_op1 model2_dest_op1 model1_src_op2 model2_dest_op2 ... \n'+
             '--srcop_destop combined_model1.2_src_op1 model3_dest_op1 combined_model1.2_src_op2 model3_dest_op2 ...'
+    )
+    parser.add_argument(
+        '--op_prefixes_after_merging',
+        type=str,
+        nargs='+',
+        help=\
+            'Since a single ONNX file cannot contain multiple OPs with the same name, '+
+            'a prefix is added to all OPs in each input ONNX model to avoid duplication. \n'+
+            'Specify the same number of paths as input_onnx_file_paths. \n'+
+            'e.g. --op_prefixes_after_merging model1_prefix model2_prefix model3_prefix ...'
     )
     parser.add_argument(
         '--output_onnx_file_path',
@@ -349,8 +382,8 @@ def main():
 
     # Model combine
     combined_model = combine(
-        op_prefixes_after_merging=args.op_prefixes_after_merging,
         srcop_destop=args.srcop_destop,
+        op_prefixes_after_merging=args.op_prefixes_after_merging,
         input_onnx_file_paths=args.input_onnx_file_paths,
         output_onnx_file_path=args.output_onnx_file_path,
         output_of_onnx_file_in_the_process_of_fusion=args.output_of_onnx_file_in_the_process_of_fusion,
