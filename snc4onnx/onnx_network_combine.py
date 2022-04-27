@@ -4,6 +4,7 @@ import sys
 import os
 import traceback
 import collections
+import itertools
 from argparse import ArgumentParser
 import onnx
 import onnx_graphsurgeon as gs
@@ -204,7 +205,7 @@ def combine(
 
     # MODEL_INDX print - only input_onnx_file_paths
     if len(onnx_graphs) == 0:
-        for idx, (input_onnx_file_path, op_prefix_after_merging) in enumerate(zip(input_onnx_file_paths, op_prefixes_after_merging)):
+        for idx, (input_onnx_file_path, op_prefix_after_merging) in enumerate(itertools.zip_longest(input_onnx_file_paths, op_prefixes_after_merging)):
             if not non_verbose:
                 print(
                     f'{Color.GREEN}INFO:{Color.RESET} '+
