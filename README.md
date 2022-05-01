@@ -250,7 +250,7 @@ combined_graph = combine(
 ### 6-2 INPUT + INPUT
 - Summary
 
-![image](https://user-images.githubusercontent.com/33194443/166130725-4fdbb466-08ad-4ab3-9b24-f3b93819d36d.png)
+  ![image](https://user-images.githubusercontent.com/33194443/166130725-4fdbb466-08ad-4ab3-9b24-f3b93819d36d.png)
 
 - Model.1
 
