@@ -255,15 +255,20 @@ def combine(
                 prefix=dest_prefix
             )
 
+        src_gs_model = gs.import_onnx(src_model)
+        dest_gs_model = gs.import_onnx(dest_model)
+
         # Duplicate OP name check
-        src_model_op_names = \
-            [graph_node.name for graph_node in src_model.graph.node] + \
-            [graph_input.name for graph_input in src_model.graph.input] + \
-            [graph_output.name for graph_output in src_model.graph.output]
-        dest_model_op_names = \
-            [graph_node.name for graph_node in dest_model.graph.node] + \
-            [graph_input.name for graph_input in dest_model.graph.input] + \
-            [graph_output.name for graph_output in dest_model.graph.output]
+        src_node_names = [graph_node.name for graph_node in src_gs_model.nodes]
+        src_input_names = [graph_input.name for graph_input in src_gs_model.inputs]
+        src_output_names = [graph_output.name for graph_output in src_gs_model.outputs if graph_output.name not in src_node_names]
+        src_model_op_names = src_node_names + src_input_names + src_output_names
+
+        dest_node_names = [graph_node.name for graph_node in dest_gs_model.nodes]
+        dest_input_names = [graph_input.name for graph_input in dest_gs_model.inputs]
+        dest_output_names = [graph_output.name for graph_output in dest_gs_model.outputs if graph_output.name not in dest_node_names]
+        dest_model_op_names = dest_node_names + dest_input_names + dest_output_names
+
         merged_model_op_names = src_model_op_names + dest_model_op_names
         op_name_count = collections.Counter(merged_model_op_names)
         dup_msg = ''
@@ -280,13 +285,78 @@ def combine(
             )
             sys.exit(1)
 
-        io_map = [(f'{src_prefix}{io_map_srcop_destop[0]}', f'{dest_prefix}{io_map_srcop_destop[1]}') for io_map_srcop_destop in srcop_destop]
+        # Transfer all INPUTs, Nodes and OUTPUTs of dest_gs_model to src_gs_model
+        ## INPUTs
+        for dest_gs_model_input in dest_gs_model.inputs:
+            src_gs_model.inputs.append(dest_gs_model_input)
+        ## Nodes
+        for dest_gs_model_node in dest_gs_model.nodes:
+            src_gs_model.nodes.append(dest_gs_model_node)
+        ## OUTPUTs
+        for dest_gs_model_output in dest_gs_model.outputs:
+            src_gs_model.outputs.append(dest_gs_model_output)
 
-        combined_model = onnx.compose.merge_models(
-            src_model,
-            dest_model,
-            io_map=io_map
-        )
+
+        # If the OP specified as srcop in io_map_srcop_destop is a graph INPUT,
+        # use onnx_graphsurgeon to merge
+        # Otherwise, use onnx.compose.merge_models for simple merging
+        srcop_names = [f'{src_prefix}{srcop_destop_src}' for srcop_destop_src in srcop_destop[model_idx][::2]]
+        destop_names = [f'{dest_prefix}{srcop_destop_dest}' for srcop_destop_dest in srcop_destop[model_idx][1::2]]
+        src_gs_model_input_names = [src_gs_model_input.name for src_gs_model_input in src_gs_model.inputs]
+
+        for srcop_name, destop_name in zip(srcop_names, destop_names):
+            # Split processing if srcop_name is included or not included in the graph INPUT
+            if srcop_name in src_gs_model_input_names:
+                # Overwrite srcop with destop if srcop_name is included in the graph INPUT
+                for src_gs_model_input in src_gs_model.inputs:
+                    if src_gs_model_input.name == srcop_name:
+                        for src_gs_model_node in src_gs_model.nodes:
+                            for src_inp_idx, src_gs_model_node_input in enumerate(src_gs_model_node.inputs):
+                                if src_gs_model_node_input.name == destop_name:
+                                    src_gs_model_node.inputs[src_inp_idx] = src_gs_model_input
+            else:
+                src_output = None
+                for src_gs_model_node in src_gs_model.nodes:
+                    for src_gs_model_node_output in src_gs_model_node.outputs:
+                        if src_gs_model_node_output.name == srcop_name:
+                            src_output = src_gs_model_node_output
+                            break
+                    else:
+                        continue
+                    break
+                if src_output:
+                    for src_gs_model_node in src_gs_model.nodes:
+                        for inp_idx, src_gs_model_node_input in enumerate(src_gs_model_node.inputs):
+                            if src_gs_model_node_input.name == destop_name:
+                                src_gs_model_node.inputs[inp_idx] = src_output
+                                # Delete from the graph OUTPUT if the Node was specified as the OUTPUT of the graph.
+                                for out_idx, src_gs_model_output in enumerate(src_gs_model.outputs):
+                                    if src_gs_model_output.name == src_output.name:
+                                        del src_gs_model.outputs[out_idx]
+                                        break
+
+        # Delete unused INPUTs
+        input_names = [input.name for input in src_gs_model.inputs]
+        remove_input_names = []
+        for input_name in input_names:
+            used_flg = False
+            for node in src_gs_model.nodes:
+                for input in node.inputs:
+                    if input.name == input_name:
+                        used_flg = True
+                        break
+                else:
+                    continue
+                break
+            if not used_flg:
+                remove_input_names.append(input_name)
+        src_gs_model.inputs = [
+            src_gs_model_input for src_gs_model_input in src_gs_model.inputs if src_gs_model_input.name not in remove_input_names
+        ]
+
+        # Cleaning
+        src_gs_model.cleanup().toposort()
+        combined_model = gs.export_onnx(src_gs_model)
 
         ## Output of onnx files in the process of fusion
         if output_of_onnx_file_in_the_process_of_fusion and output_onnx_file_path:
@@ -301,7 +371,24 @@ def combine(
                     f'Output the fusion result of model {model_idx+1} and model {model_idx+2}. File: {temp_file_path}'
                 )
 
-    ## 3. Optimize
+    # 3. If the number of INPUTs in the entire graph is reduced to one,
+    # reassign the name of the INPUT in srcop without prefix
+    gs_combined_model = gs.import_onnx(combined_model)
+    input_names = [input.name for input in gs_combined_model.inputs]
+    if len(input_names) == 1:
+        input_name = input_names[0]
+        for gs_combined_model_node in gs_combined_model.nodes:
+            for gs_combined_model_node_input in gs_combined_model_node.inputs:
+                if gs_combined_model_node_input.name == input_name:
+                    gs_combined_model_node_input.name = gs_combined_model.inputs[0].name.lstrip(src_prefix)
+                    break
+            else:
+                continue
+            break
+        gs_combined_model.inputs[0].name = gs_combined_model.inputs[0].name.lstrip(src_prefix)
+        combined_model = gs.export_onnx(gs_combined_model)
+
+    ## 4. Optimize
     try:
         combined_model, check = simplify(combined_model)
     except Exception as e:
@@ -313,14 +400,14 @@ def combine(
             tracetxt = traceback.format_exc().splitlines()[-1]
             print(f'{Color.YELLOW}WARNING:{Color.RESET} {tracetxt}')
 
-    ## 4. Final save
+    ## 5. Final save
     if output_onnx_file_path:
         onnx.save(combined_model, output_onnx_file_path)
 
     if not non_verbose:
         print(f'{Color.GREEN}INFO:{Color.RESET} Finish!')
 
-    # 5. Return
+    # 6. Return
     return combined_model
 
 

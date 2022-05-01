@@ -220,6 +220,7 @@ combined_graph = combine(
 ```
 
 ## 6. Sample
+### 6-1 INPUT <-> OUTPUT
 - Summary
 
   ![image](https://user-images.githubusercontent.com/33194443/162609071-ddd7ba38-ad05-4a15-ad13-9ddfe2adec99.png)
@@ -234,7 +235,7 @@ combined_graph = combine(
 
 - Merge
 
-  ```
+  ```bash
   $ snc4onnx \
   --input_onnx_file_paths crestereo_init_iter2_120x160.onnx crestereo_next_iter2_240x320.onnx \
   --op_prefixes_after_merging init next \
@@ -245,6 +246,34 @@ combined_graph = combine(
 
   ![image](https://user-images.githubusercontent.com/33194443/162609353-6e50c33c-ff0d-4cca-93fb-98636b605dbe.png)
   ![image](https://user-images.githubusercontent.com/33194443/162609415-cb302fee-90f4-41a7-aadf-08d6de29b40c.png)
+
+### 6-2 INPUT + INPUT
+- Summary
+
+![image](https://user-images.githubusercontent.com/33194443/166130725-4fdbb466-08ad-4ab3-9b24-f3b93819d36d.png)
+
+- Model.1
+
+  ![image](https://user-images.githubusercontent.com/33194443/166130641-ff11c55b-f7e1-4231-b410-d94afa91418d.png)
+
+- Model.2
+
+  ![image](https://user-images.githubusercontent.com/33194443/166130699-fff17184-8586-4c86-a9b5-64f9566572fa.png)
+
+- Merge
+
+  ```bash
+  $ snc4onnx \
+  --input_onnx_file_paths objectron_camera_224x224.onnx objectron_chair_224x224.onnx \
+  --srcop_destop input_1 input_1 \
+  --op_prefixes_after_merging camera chair \
+  --output_onnx_file_path objectron_camera_chair_224x224.onnx
+  ```
+
+- Result
+
+  ![image](https://user-images.githubusercontent.com/33194443/166130549-d46f48b1-0b8b-40ad-bc9d-16b2046c963f.png)
+  ![image](https://user-images.githubusercontent.com/33194443/166130582-8abaefbc-bcb5-4b3d-9b21-3da1b4c3460b.png)
 
 ## 7. Reference
 1. https://github.com/onnx/onnx/blob/main/docs/PythonAPIOverview.md
