@@ -386,7 +386,9 @@ def combine(
                 continue
             break
         gs_combined_model.inputs[0].name = gs_combined_model.inputs[0].name.lstrip(src_prefix)
-        combined_model = gs.export_onnx(gs_combined_model)
+
+    gs_combined_model.cleanup().toposort()
+    combined_model = gs.export_onnx(gs_combined_model)
 
     ## 4. Optimize
     try:
