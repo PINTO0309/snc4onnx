@@ -2,6 +2,7 @@
 
 import sys
 import os
+import re
 import traceback
 import collections
 import itertools
@@ -380,12 +381,28 @@ def combine(
         for gs_combined_model_node in gs_combined_model.nodes:
             for gs_combined_model_node_input in gs_combined_model_node.inputs:
                 if gs_combined_model_node_input.name == input_name:
-                    gs_combined_model_node_input.name = gs_combined_model.inputs[0].name.lstrip(src_prefix)
+                    gs_combined_model_node_input.name = re.sub(f'^{src_prefix}', '', gs_combined_model.inputs[0].name)
                     break
             else:
                 continue
             break
-        gs_combined_model.inputs[0].name = gs_combined_model.inputs[0].name.lstrip(src_prefix)
+        gs_combined_model_node_input.name = re.sub(f'^{src_prefix}', '', gs_combined_model.inputs[0].name)
+
+    # 4. Remove prefix from all OUTPUT names
+    # However, if there are duplicate names after removing the prefix, skip the process.
+    replaced_output_names = []
+    for gs_combined_model_node_output in gs_combined_model.outputs:
+        tmp_replaced_output_name = re.sub(f'^{src_prefix}', '', gs_combined_model_node_output.name)
+        if tmp_replaced_output_name not in replaced_output_names:
+            gs_combined_model_node_output.name = tmp_replaced_output_name
+            replaced_output_names.append(tmp_replaced_output_name)
+
+    replaced_output_names = []
+    for gs_combined_model_node_output in gs_combined_model.outputs:
+        tmp_replaced_output_name = re.sub(f'^{dest_prefix}', '', gs_combined_model_node_output.name)
+        if tmp_replaced_output_name not in replaced_output_names:
+            gs_combined_model_node_output.name = tmp_replaced_output_name
+            replaced_output_names.append(tmp_replaced_output_name)
 
     gs_combined_model.cleanup().toposort()
     combined_model = gs.export_onnx(gs_combined_model)
