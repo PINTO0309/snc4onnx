@@ -47,12 +47,17 @@ optional arguments:
       Input onnx file paths. At least two onnx files must be specified.
 
   -sd SRCOP_DESTOP [SRCOP_DESTOP ...], --srcop_destop SRCOP_DESTOP [SRCOP_DESTOP ...]
-      The names of the output OP to join from and the input OP to join to are out1 in1 out2 in2 out3 in3 .... format.
-      In other words, to combine model1 and model2, --srcop_destop model1_out1 model2_in1 model1_out2 model2_in2
+      The names of the output OP to join from and the input OP to join to are
+      out1 in1 out2 in2 out3 in3 ....
+      format.
+      In other words, to combine model1 and model2,
+      --srcop_destop model1_out1 model2_in1 model1_out2 model2_in2
       Also, --srcop_destop can be specified multiple times.
       The first --srcop_destop specifies the correspondence between model1 and model2,
-      and the second --srcop_destop specifies the correspondence between model1 and model2 combined and model3.
-      It is necessary to take into account that the prefix specified in op_prefixes_after_merging is
+      and the second --srcop_destop specifies the correspondence between
+      model1 and model2 combined and model3.
+      It is necessary to take into account that the prefix specified
+      in op_prefixes_after_merging is
       given at the beginning of each OP name.
       e.g. To combine model1 with model2 and model3.
       --srcop_destop model1_src_op1 model2_dest_op1 model1_src_op2 model2_dest_op2 ...
