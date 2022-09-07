@@ -433,6 +433,7 @@ def combine(
 def main():
     parser = ArgumentParser()
     parser.add_argument(
+        '-if',
         '--input_onnx_file_paths',
         type=str,
         required=True,
@@ -440,6 +441,7 @@ def main():
         help='Input onnx file paths. At least two onnx files must be specified.'
     )
     parser.add_argument(
+        '-sd',
         '--srcop_destop',
         type=str,
         required=True,
@@ -460,6 +462,7 @@ def main():
             '--srcop_destop combined_model1.2_src_op1 model3_dest_op1 combined_model1.2_src_op2 model3_dest_op2 ...'
     )
     parser.add_argument(
+        '-opam',
         '--op_prefixes_after_merging',
         type=str,
         nargs='+',
@@ -470,17 +473,20 @@ def main():
             'e.g. --op_prefixes_after_merging model1_prefix model2_prefix model3_prefix ...'
     )
     parser.add_argument(
+        '-of',
         '--output_onnx_file_path',
         type=str,
         default='merged_model.onnx',
         help='Output onnx file path.'
     )
     parser.add_argument(
+        '-f',
         '--output_of_onnx_file_in_the_process_of_fusion',
         action='store_true',
         help='Output of onnx files in the process of fusion.'
     )
     parser.add_argument(
+        '-n',
         '--non_verbose',
         action='store_true',
         help='Do not show all information logs. Only error logs are displayed.'
