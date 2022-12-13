@@ -235,6 +235,7 @@ combined_graph = combine(
   ```bash
   $ snc4onnx \
   --input_onnx_file_paths crestereo_init_iter2_120x160.onnx crestereo_next_iter2_240x320.onnx \
+  --output_onnx_file_path merged.onnx \
   --op_prefixes_after_merging init next \
   --srcop_destop output flow_init
   ```
