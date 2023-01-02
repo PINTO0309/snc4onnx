@@ -497,11 +497,12 @@ def combine(
             print(f'{Color.YELLOW}WARNING:{Color.RESET} {tracetxt}')
 
     ## 5. Restore a node's custom domain
-    combined_model_graph_nodes = combined_model.graph.node
-    for combined_model_graph_node in combined_model_graph_nodes:
-        for custom_domain_check_onnx_node in custom_domain_check_onnx_nodes:
-            if combined_model_graph_node.name == custom_domain_check_onnx_node.name:
-                combined_model_graph_node.domain = custom_domain_check_onnx_node.domain
+    if contains_custom_domain:
+        combined_model_graph_nodes = combined_model.graph.node
+        for combined_model_graph_node in combined_model_graph_nodes:
+            for custom_domain_check_onnx_node in custom_domain_check_onnx_nodes:
+                if combined_model_graph_node.name == custom_domain_check_onnx_node.name:
+                    combined_model_graph_node.domain = custom_domain_check_onnx_node.domain
 
     ## 6. Final save
     if output_onnx_file_path:
