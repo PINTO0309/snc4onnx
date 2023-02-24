@@ -1,7 +1,7 @@
 # snc4onnx
 Simple tool to combine(merge) onnx models. **S**imple **N**etwork **C**ombine Tool for **ONNX**.
 
-You guys don't have to go out of your way to use this tool, you can use the official API and write your code as you like. I only created this tool because I didn't want to write a single line of Python code.
+You guys don't have to go out of your way to use this tool, you can use the official API and write your code as you like. I only created this tool because I didn't want to write a single line of Python code. What can be done with this tool can also be done with the official API.
 https://github.com/onnx/onnx/blob/main/docs/PythonAPIOverview.md#onnx-compose
 
 https://github.com/PINTO0309/simple-onnx-processing-tools
