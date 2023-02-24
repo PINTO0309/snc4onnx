@@ -1,6 +1,8 @@
 # snc4onnx
 Simple tool to combine(merge) onnx models. **S**imple **N**etwork **C**ombine Tool for **ONNX**.
 
+You guys don't have to go out of your way to use this tool, you can use the official API and write your code as you like. I only created this tool because I didn't want to write a single line of Python code.
+
 https://github.com/PINTO0309/simple-onnx-processing-tools
 
 [![Downloads](https://static.pepy.tech/personalized-badge/snc4onnx?period=total&units=none&left_color=grey&right_color=brightgreen&left_text=Downloads)](https://pepy.tech/project/snc4onnx) ![GitHub](https://img.shields.io/github/license/PINTO0309/snc4onnx?color=2BAF2B) [![PyPI](https://img.shields.io/pypi/v/snc4onnx?color=2BAF2B)](https://pypi.org/project/snc4onnx/) [![CodeQL](https://github.com/PINTO0309/snc4onnx/workflows/CodeQL/badge.svg)](https://github.com/PINTO0309/snc4onnx/actions?query=workflow%3ACodeQL)
