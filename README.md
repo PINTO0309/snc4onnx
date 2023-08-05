@@ -40,13 +40,15 @@ usage:
     [-opam OP_PREFIXES_AFTER_MERGING [OP_PREFIXES_AFTER_MERGING ...]]
     [-of OUTPUT_ONNX_FILE_PATH]
     [-f]
+    [-dos]
     [-n]
 
 optional arguments:
   -h, --help
     show this help message and exit.
 
-  -if INPUT_ONNX_FILE_PATHS [INPUT_ONNX_FILE_PATHS ...], --input_onnx_file_paths INPUT_ONNX_FILE_PATHS [INPUT_ONNX_FILE_PATHS ...]
+  -if INPUT_ONNX_FILE_PATHS [INPUT_ONNX_FILE_PATHS ...], \
+    --input_onnx_file_paths INPUT_ONNX_FILE_PATHS [INPUT_ONNX_FILE_PATHS ...]
       Input onnx file paths. At least two onnx files must be specified.
 
   -sd SRCOP_DESTOP [SRCOP_DESTOP ...], --srcop_destop SRCOP_DESTOP [SRCOP_DESTOP ...]
@@ -66,7 +68,8 @@ optional arguments:
       --srcop_destop model1_src_op1 model2_dest_op1 model1_src_op2 model2_dest_op2 ...
       --srcop_destop combined_model1.2_src_op1 model3_dest_op1 combined_model1.2_src_op2 model3_dest_op2 ...
 
-  -opam OP_PREFIXES_AFTER_MERGING [OP_PREFIXES_AFTER_MERGING ...], --op_prefixes_after_merging OP_PREFIXES_AFTER_MERGING [OP_PREFIXES_AFTER_MERGING ...]
+  -opam OP_PREFIXES_AFTER_MERGING [OP_PREFIXES_AFTER_MERGING ...], \
+    --op_prefixes_after_merging OP_PREFIXES_AFTER_MERGING [OP_PREFIXES_AFTER_MERGING ...]
       Since a single ONNX file cannot contain multiple OPs with the same name,
       a prefix is added to all OPs in each input ONNX model to avoid duplication.
       Specify the same number of paths as input_onnx_file_paths.
@@ -77,6 +80,9 @@ optional arguments:
 
   -f, --output_of_onnx_file_in_the_process_of_fusion
       Output of onnx files in the process of fusion.
+
+  -dos, --disable_onnxsim
+      Suppress the execution of onnxsim on the backend and dare to leave redundant processing.
 
   -n, --non_verbose
       Do not show all information logs. Only error logs are displayed.
@@ -97,6 +103,7 @@ combine(
   onnx_graphs: Union[List[onnx.onnx_ml_pb2.ModelProto], NoneType] = [],
   output_onnx_file_path: Union[str, NoneType] = '',
   output_of_onnx_file_in_the_process_of_fusion: Union[bool, NoneType] = False,
+  disable_onnxsim: Union[bool, NoneType] = False,
   non_verbose: Union[bool, NoneType] = False
 ) -> onnx.onnx_ml_pb2.ModelProto
 
@@ -158,6 +165,10 @@ combine(
 
     output_of_onnx_file_in_the_process_of_fusion: Optional[bool]
         Output of onnx files in the process of fusion.
+        Default: False
+
+    disable_onnxsim: Optional[bool]
+        Suppress the execution of onnxsim on the backend and dare to leave redundant processing.
         Default: False
 
     non_verbose: Optional[bool]

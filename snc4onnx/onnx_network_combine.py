@@ -52,6 +52,7 @@ def combine(
     onnx_graphs: Optional[List[onnx.ModelProto]] = [],
     output_onnx_file_path: Optional[str] = '',
     output_of_onnx_file_in_the_process_of_fusion: Optional[bool] = False,
+    disable_onnxsim: Optional[bool] = False,
     non_verbose: Optional[bool] = False,
 ) -> onnx.ModelProto:
     """
@@ -109,6 +110,10 @@ def combine(
 
     output_of_onnx_file_in_the_process_of_fusion: Optional[bool]
         Output of onnx files in the process of fusion.\n\
+        Default: False
+
+    disable_onnxsim: Optional[bool]
+        Suppress the execution of onnxsim on the backend and dare to leave redundant processing.\n\
         Default: False
 
     non_verbose: Optional[bool]
@@ -485,7 +490,7 @@ def combine(
     try:
         # onnx-simplifier does not support optimization of ONNX files containing custom domains,
         # so skip simplify if it contains custom domains
-        if not contains_custom_domain:
+        if not contains_custom_domain and not disable_onnxsim:
             combined_model, check = simplify(combined_model)
     except Exception as e:
         if not non_verbose:
@@ -571,6 +576,12 @@ def main():
         help='Output of onnx files in the process of fusion.'
     )
     parser.add_argument(
+        '-dos',
+        '--disable_onnxsim',
+        action='store_true',
+        help='Suppress the execution of onnxsim on the backend and dare to leave redundant processing.'
+    )
+    parser.add_argument(
         '-n',
         '--non_verbose',
         action='store_true',
@@ -585,6 +596,7 @@ def main():
         input_onnx_file_paths=args.input_onnx_file_paths,
         output_onnx_file_path=args.output_onnx_file_path,
         output_of_onnx_file_in_the_process_of_fusion=args.output_of_onnx_file_in_the_process_of_fusion,
+        disable_onnxsim=args.disable_onnxsim,
         non_verbose=args.non_verbose,
     )
 
