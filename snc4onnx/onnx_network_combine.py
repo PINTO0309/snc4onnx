@@ -230,11 +230,15 @@ def combine(
     ## 1. ONNX load
     tmp_onnx_graphs = []
     custom_domain_check_onnx_nodes = []
+    max_ir_version: int = 0
     if len(onnx_graphs) > 0:
         for onnx_graph in onnx_graphs:
+            domain: str = onnx_graph.domain
+            ir_version: int = onnx_graph.ir_version
+            max_ir_version = ir_version if max_ir_version < ir_version else max_ir_version
             gs_graph = gs.import_onnx(onnx_graph)
             gs_graph.cleanup().toposort()
-            tmp_onnx_graphs.append(gs.export_onnx(gs_graph))
+            tmp_onnx_graphs.append(gs.export_onnx(gs_graph, do_type_check=False, **{'domain': domain, 'ir_version': ir_version}))
             custom_domain_check_onnx_nodes = \
                 custom_domain_check_onnx_nodes + \
                     [
@@ -243,9 +247,13 @@ def combine(
                     ]
     else:
         for onnx_path in input_onnx_file_paths:
-            gs_graph = gs.import_onnx(onnx.load(onnx_path))
+            onnx_graph = onnx.load(onnx_path)
+            domain: str = onnx_graph.domain
+            ir_version: int = onnx_graph.ir_version
+            max_ir_version = ir_version if max_ir_version < ir_version else max_ir_version
+            gs_graph = gs.import_onnx(onnx_graph)
             gs_graph.cleanup().toposort()
-            tmp_onnx_graphs.append(gs.export_onnx(gs_graph))
+            tmp_onnx_graphs.append(gs.export_onnx(gs_graph, do_type_check=False, **{'domain': domain, 'ir_version': ir_version}))
             custom_domain_check_onnx_graph = onnx.load(onnx_path)
             custom_domain_check_onnx_nodes = \
                 custom_domain_check_onnx_nodes + \
@@ -436,7 +444,7 @@ def combine(
 
         # Cleaning
         src_gs_model.cleanup().toposort()
-        combined_model = gs.export_onnx(src_gs_model)
+        combined_model = gs.export_onnx(src_gs_model, do_type_check=False, **{'ir_version': max_ir_version})
 
         ## Output of onnx files in the process of fusion
         if output_of_onnx_file_in_the_process_of_fusion and output_onnx_file_path:
@@ -484,7 +492,7 @@ def combine(
             replaced_output_names.append(tmp_replaced_output_name)
 
     gs_combined_model.cleanup().toposort()
-    combined_model = gs.export_onnx(gs_combined_model)
+    combined_model = gs.export_onnx(gs_combined_model, do_type_check=False, **{'ir_version': max_ir_version})
 
     ## 4. Optimize
     try:
