@@ -350,7 +350,8 @@ def combine(
         op_name_count = collections.Counter(merged_model_op_names)
         dup_msg = ''
         for op_name, count in op_name_count.items():
-            if count > 1:
+            # OPs with empty op_name will skip the check.
+            if op_name != "" and count > 1:
                 dup_msg = f'{dup_msg}op_name:{op_name} count:{count}, '
         dup_msg = dup_msg.rstrip(', ')
         if dup_msg:
